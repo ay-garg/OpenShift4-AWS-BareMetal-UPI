@@ -1,0 +1,475 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to create a VPC with 3 public and 3 private subnets, Internet Gateway, 3 NAT Gateways, S3 endpoint, Private Hosted Zone, Network Load Balancer, and EC2 instance.
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+
+  S3BucketName:
+    Description: Name of the S3 bucket to be created
+    Type: String
+    ConstraintDescription: Must be a valid S3 bucket name.
+
+  ResourcePrefix:
+    Description: Prefix to be added to the starting of each resource name
+    Type: String
+    ConstraintDescription: Must be a valid prefix for resource names.
+
+  PrivateDomainName:
+    Description: Domain name for private hosted zone
+    Type: String
+    ConstraintDescription: Must be a valid domain for private hosted zone to be created.
+
+  EC2InstanceAMI:
+    Description: AMI ID for bastion EC2 instance
+    Type: String
+    ConstraintDescription: Must be a valid AMI ID for bastion EC2 instance.
+
+  OCP4ClusterName:
+    Description: OpenShift 4 Cluster name
+    Type: String
+    ConstraintDescription: OpenShift 4 Cluster name
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-VPC"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "${ResourcePrefix}-InternetGateway"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PublicSubnet1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PublicSubnet2"
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PublicSubnet3"
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.4.0/24
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PrivateSubnet1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.5.0/24
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PrivateSubnet2"
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.6.0/24
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PrivateSubnet3"
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PublicRouteTable"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociationPublic1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  SubnetRouteTableAssociationPublic2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  SubnetRouteTableAssociationPublic3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable
+
+  NatGatewayEIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      AllocationId: !GetAtt NatGatewayEIP1.AllocationId
+
+  NatGatewayEIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      AllocationId: !GetAtt NatGatewayEIP2.AllocationId
+
+  NatGatewayEIP3:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway3:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      AllocationId: !GetAtt NatGatewayEIP3.AllocationId
+
+  RouteTablePrivate1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PrivateRouteTable1"
+
+  RoutePrivate1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  SubnetRouteTableAssociationPrivate1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref RouteTablePrivate1
+
+  RouteTablePrivate2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PrivateRouteTable2"
+
+  RoutePrivate2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  SubnetRouteTableAssociationPrivate2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref RouteTablePrivate2
+
+  RouteTablePrivate3:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-PrivateRouteTable3"
+
+  RoutePrivate3:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway3
+
+  SubnetRouteTableAssociationPrivate3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref RouteTablePrivate3
+
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+
+
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      RouteTableIds:
+        - !Ref RouteTablePrivate1
+        - !Ref RouteTablePrivate2
+        - !Ref RouteTablePrivate3
+
+  PrivateHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref PrivateDomainName
+      VPCs:
+        - VPCId: !Ref VPC
+          VPCRegion: !Ref AWS::Region
+      HostedZoneConfig:
+        Comment: !Sub "Private hosted zone for ${PrivateDomainName}"
+
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${ResourcePrefix}-NLB"
+      Scheme: internal
+      Type: network
+      Subnets:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: 'true'
+
+  Listener6443:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup6443
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 6443
+      Protocol: TCP
+
+  Listener22623:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup22623
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 22623
+      Protocol: TCP
+
+  Listener80:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup80
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 80
+      Protocol: TCP
+
+  Listener443:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup443
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 443
+      Protocol: TCP
+
+  TargetGroup6443:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ResourcePrefix}-6443"
+      Port: 6443
+      Protocol: TCP
+      VpcId: !Ref VPC
+      HealthCheckProtocol: TCP
+      TargetType: ip
+
+  TargetGroup22623:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ResourcePrefix}-22623"
+      Port: 22623
+      Protocol: TCP
+      VpcId: !Ref VPC
+      HealthCheckProtocol: TCP
+      TargetType: ip
+
+  TargetGroup80:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ResourcePrefix}-80"
+      Port: 80
+      Protocol: TCP
+      VpcId: !Ref VPC
+      HealthCheckProtocol: TCP
+      TargetType: ip
+
+  TargetGroup443:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ResourcePrefix}-443"
+      Port: 443
+      Protocol: TCP
+      VpcId: !Ref VPC
+      HealthCheckProtocol: TCP
+      TargetType: ip
+
+  DNSRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: Creating records for API, api-int and *.apps
+      HostedZoneId: !Ref PrivateHostedZone
+      RecordSets:
+      - Name: !Sub "api.${OCP4ClusterName}.${PrivateDomainName}"
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt 'NetworkLoadBalancer.CanonicalHostedZoneID'
+          DNSName: !GetAtt 'NetworkLoadBalancer.DNSName'
+      - Name: !Sub "api-int.${OCP4ClusterName}.${PrivateDomainName}"
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt 'NetworkLoadBalancer.CanonicalHostedZoneID'
+          DNSName: !GetAtt 'NetworkLoadBalancer.DNSName'
+      - Name: !Sub "*.apps.${OCP4ClusterName}.${PrivateDomainName}"
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt 'NetworkLoadBalancer.CanonicalHostedZoneID'
+          DNSName: !GetAtt 'NetworkLoadBalancer.DNSName'
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access and application ports
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1  # -1 means all protocols
+          CidrIp: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-InstanceSecurityGroup"
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.medium
+      KeyName: !Ref KeyName
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      ImageId: !Sub "${EC2InstanceAMI}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-Bastion"
+
+Outputs:
+  VPCId:
+    Description: VPC Id
+    Value: !Ref VPC
+
+  PublicSubnet1Id:
+    Description: Public Subnet 1 Id
+    Value: !Ref PublicSubnet1
+
+  PublicSubnet2Id:
+    Description: Public Subnet 2 Id
+    Value: !Ref PublicSubnet2
+
+  PublicSubnet3Id:
+    Description: Public Subnet 3 Id
+    Value: !Ref PublicSubnet3
+
+  PrivateSubnet1Id:
+    Description: Private Subnet 1 Id
+    Value: !Ref PrivateSubnet1
+
+  PrivateSubnet2Id:
+    Description: Private Subnet 2 Id
+    Value: !Ref PrivateSubnet2
+
+  PrivateSubnet3Id:
+    Description: Private Subnet 3 Id
+    Value: !Ref PrivateSubnet3
+
+  TargetGroup6443Id:
+    Description: TargetGroup6443 Id
+    Value: !Ref TargetGroup6443
+
+  TargetGroup22623Id:
+    Description: TargetGroup22623 Id
+    Value: !Ref TargetGroup22623
+
+  TargetGroup443Id:
+    Description: TargetGroup443 Id
+    Value: !Ref TargetGroup443
+
+  TargetGroup80Id:
+    Description: TargetGroup80 Id
+    Value: !Ref TargetGroup80
+
+  EC2PublicIP:
+    Description: The public IP address of the EC2 instance.
+    Value: !GetAtt EC2Instance.PrivateIp
+
+  SecurityGroupId:
+    Description: Security Group Id
+    Value: !Ref InstanceSecurityGroup

@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to create bootstrap instance with user-data.
+
+Parameters:
+
+  ResourcePrefix:
+    Description: Prefix to be added to the starting of each resource name
+    Type: String
+    ConstraintDescription: Must be a valid prefix for resource names.
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: m4.xlarge
+    AllowedValues:
+      - c4.2xlarge
+      - c4.4xlarge
+      - c4.8xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5a.2xlarge
+      - m4.xlarge
+      - m4.2xlarge
+      - m5.xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  AMIId:
+    Description: AMI ID for the RHCOS instances
+    Type: String
+    ConstraintDescription: Must be a valid AMI ID.
+
+  SubnetId:
+    Type: String
+    Description: Public Subnet ID where the instance will be launched.
+
+  InstanceSecurityGroup:
+    Type: String
+    Description: Existing EC2 security group.
+
+  UserData:
+    Description: Bootstrap merge ignition data
+    Type: String
+    Default: ""
+
+
+Resources:
+
+  Bootstrap:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AMIId
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      UserData: !Ref UserData
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-Bootstrap"
+
+
+Outputs:
+
+  BootstrapNodePublicIP:
+    Description: The public IP address of the EC2 instance.
+    Value: !GetAtt Bootstrap.PublicIp
