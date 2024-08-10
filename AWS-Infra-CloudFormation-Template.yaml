@@ -468,7 +468,7 @@ Outputs:
 
   EC2PublicIP:
     Description: The public IP address of the EC2 instance.
-    Value: !GetAtt EC2Instance.PrivateIp
+    Value: !GetAtt EC2Instance.PublicIp
 
   SecurityGroupId:
     Description: Security Group Id
