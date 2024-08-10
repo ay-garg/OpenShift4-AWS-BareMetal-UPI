@@ -56,13 +56,17 @@ Resources:
   Master1:
     Type: AWS::EC2::Instance
     Properties:
-      Size: 100
       InstanceType: !Ref InstanceType
       ImageId: !Ref AMIId
       SubnetId: !Ref PrivateSubnet1Id
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
       UserData: !Ref UserData
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
       Tags:
         - Key: Name
           Value: !Sub "${ResourcePrefix}-master-1"
@@ -71,13 +75,17 @@ Resources:
   Master2:
     Type: AWS::EC2::Instance
     Properties:
-      Size: 100
       InstanceType: !Ref InstanceType
       ImageId: !Ref AMIId
       SubnetId: !Ref PrivateSubnet2Id
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
       UserData: !Ref UserData
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
       Tags:
         - Key: Name
           Value: !Sub "${ResourcePrefix}-master-2"
@@ -86,13 +94,17 @@ Resources:
   Master3:
     Type: AWS::EC2::Instance
     Properties:
-      Size: 100
       InstanceType: !Ref InstanceType
       ImageId: !Ref AMIId
       SubnetId: !Ref PrivateSubnet3Id
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
       UserData: !Ref UserData
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
       Tags:
         - Key: Name
           Value: !Sub "${ResourcePrefix}-master-3"
