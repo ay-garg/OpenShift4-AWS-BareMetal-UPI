@@ -48,7 +48,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: "${ResourcePrefix}-InternetGateway"
+          Value: !Sub "${ResourcePrefix}-InternetGateway"
 
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
