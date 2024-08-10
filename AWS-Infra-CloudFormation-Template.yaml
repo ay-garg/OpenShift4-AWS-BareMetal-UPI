@@ -416,6 +416,11 @@ Resources:
       SubnetId: !Ref PublicSubnet1
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 40
+            VolumeType: gp2
       ImageId: !Sub "${EC2InstanceAMI}"
       Tags:
         - Key: Name
