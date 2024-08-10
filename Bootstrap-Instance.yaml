@@ -48,6 +48,7 @@ Resources:
   Bootstrap:
     Type: AWS::EC2::Instance
     Properties:
+      Size: 100
       InstanceType: !Ref InstanceType
       ImageId: !Ref AMIId
       SubnetId: !Ref SubnetId
