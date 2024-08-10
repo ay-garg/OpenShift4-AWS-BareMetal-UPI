@@ -66,6 +66,7 @@ Resources:
   Worker2:
     Type: AWS::EC2::Instance
     Properties:
+      Size: 100
       InstanceType: !Ref InstanceType
       ImageId: !Ref AMIId
       SubnetId: !Ref PrivateSubnet2Id
