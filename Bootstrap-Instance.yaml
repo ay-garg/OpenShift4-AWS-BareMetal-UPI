@@ -48,13 +48,17 @@ Resources:
   Bootstrap:
     Type: AWS::EC2::Instance
     Properties:
-      Size: 100
       InstanceType: !Ref InstanceType
       ImageId: !Ref AMIId
       SubnetId: !Ref SubnetId
       SecurityGroupIds:
         - !Ref InstanceSecurityGroup
       UserData: !Ref UserData
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp2
       Tags:
         - Key: Name
           Value: !Sub "${ResourcePrefix}-Bootstrap"
