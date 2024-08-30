@@ -90,9 +90,9 @@ Resources:
 Outputs:
 
   Worker1PrivateIP:
-    Description: The public IP address of the Worker1 instance.
+    Description: The private IP address of the Worker1 instance.
     Value: !GetAtt Worker1.PrivateIp
 
   Worker2PrivateIP:
-    Description: The public IP address of the Worker2 instance.
+    Description: The private IP address of the Worker2 instance.
     Value: !GetAtt Worker2.PrivateIp
