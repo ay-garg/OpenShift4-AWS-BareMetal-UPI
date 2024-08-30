@@ -67,5 +67,5 @@ Resources:
 Outputs:
 
   BootstrapNodePublicIP:
-    Description: The public IP address of the EC2 instance.
+    Description: The private IP address of the EC2 instance.
     Value: !GetAtt Bootstrap.PrivateIp
