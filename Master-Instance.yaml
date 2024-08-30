@@ -113,13 +113,13 @@ Resources:
 Outputs:
 
   Master1PrivateIP:
-    Description: The public IP address of the Master1 instance.
+    Description: The private IP address of the Master1 instance.
     Value: !GetAtt Master1.PrivateIp
 
   Master2PrivateIP:
-    Description: The public IP address of the Master2 instance.
+    Description: The private IP address of the Master2 instance.
     Value: !GetAtt Master2.PrivateIp
 
   Master3PrivateIP:
-    Description: The public IP address of the Master3 instance.
+    Description: The private IP address of the Master3 instance.
     Value: !GetAtt Master3.PrivateIp
